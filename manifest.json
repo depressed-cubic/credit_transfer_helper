@@ -1,0 +1,18 @@
+{
+    "manifest_version": 3,
+    "name": "mapping helper",
+    "description": "show mapping or sth idk",
+    "version": "0.1",
+    "content_scripts": [
+        {
+        "js": ["scripts/apru.js"],
+        "matches": [
+            "https://vse.apru.org/*"
+        ]
+        }
+    ],
+    "web_accessible_resources": [{
+        "resources": [ "data/stuff.json" ],
+        "matches": [ "https://vse.apru.org/*" ]
+    }]
+  }
