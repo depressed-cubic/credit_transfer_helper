@@ -1,0 +1,30 @@
+.course-mapping {
+    display: flex;
+    flex-direction: column;
+    margin: 1em
+}
+
+.host-course-tile, .mapped-course-tile {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5em
+}
+
+
+
+.host-course-tile{
+    margin-bottom: 0.5em;
+}
+
+.host-course-name, .mapped-course-name {
+    flex-grow: 1;
+}
+
+.host-course-code, .mapped-course-code{
+    width: 16cw;
+}
+
+.host-course-credits, .mapped-course-credits{
+    width: 1em;
+    align-self: flex-end;
+}

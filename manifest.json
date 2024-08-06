@@ -6,6 +6,7 @@
     "content_scripts": [
         {
         "js": ["scripts/apru.js"],
+        "css": ["css/mappingStyle.css"],
         "matches": [
             "https://vse.apru.org/*"
         ]
