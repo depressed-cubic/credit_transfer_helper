@@ -1,109 +1,96 @@
 async function main() {
 
-    const data = await fetch(chrome.runtime.getURL('../data/stuff.json')).then((response) => response.json())
+    const data = chrome.storage.local
 
     let boxes = document.querySelectorAll(".ui--icon-box-content")
 
-    let codeMap = new Object()
-
-    let nameMap = new Object()
+    const parser = new DOMParser()
 
     /**
      * return an array of ust equivalent of the course, consider said uni through virtual study as well, null if not found
      * @param {string} uni name of the university without weird stuff like (Academic) 
      * @param {string} code source course code
      * @param {string} name source course name
-     * @returns array of object with property `code`, `name`, `credits` (can be empty)
+     * @returns array of object with property `code`, `name`, `credits`, `requirement`, `virtual` (can be empty)
      */
     function course_mapper(uni, code, name) {
-        /*
-        if (data[uni + " through virtual study"][code] == null) {
-            if (cache[uni] == null) {
-                cache[uni] = new Object()
-                Object.entries(data[uni + " through virtual study"]).forEach((arr) => {
-                    cache[uni][arr[1]["name"]] = arr[1]["mapsto"]
-                })
-            }
-            if (cache[uni][name] == null) {
-                return ["No existing mapping", "", ""]
-            } else {
-                return cache[uni][name]
-            }
-        }
-        return data[uni + " through virtual study"][code]["mapsto"]
-        */
-        if (codeMap[uni] == null) {
-            codeMap[uni] = new Object()
+        
 
-            if (data[uni + " through virtual study"] != null){
-                data[uni + " through virtual study"].forEach((mapping) => {
+        // getWholeList("Any","Any", "Nanyang Technological University").then(r => console.log(r))
 
-                    const hostCode = mapping["hostCourse"]["code"]
+    }
 
-                    // not doing the mapping if the code is generic
-                    if (hostCode != '#'){
-                        if (codeMap[uni][hostCode] == null) {
-                            codeMap[uni][hostCode] = []
-                        }
-                        mapping["ustEquiv"]["virtual"] = true 
-                        codeMap[uni][hostCode].push(mapping["ustEquiv"])
-                    }
-                })
-            }
+    async function updateMapping(uni) {
 
-            if (data[uni] != null) {
-                data[uni].forEach((mapping) => {
-
-                    const hostCode = mapping["hostCourse"]["code"]
-
-                    // not doing the mapping if the code is generic
-                    if (hostCode != '#'){
-                        if (codeMap[uni][hostCode] == null) {
-                            codeMap[uni][hostCode] = []
-                        }
-                        mapping["ustEquiv"]["virtual"] = false
-                        codeMap[uni][hostCode].push(mapping["ustEquiv"])
-                    }
-                })
-            }
+        async function makeRequest(term = "Any", country = "Any", institution = "Any", subject = "Any", ustCourseCode = "Any", page = 1) {
+            return fetch(
+                `https://registry.hkust.edu.hk/ajax/results-institution?page=${page}&admission_term=${term}&institution=${institution.replace(" ", "+")}&hkustsubject=${subject}&hkust_course_code=${ustCourseCode}&country_institution=${country}`, {
+               "headers": { },
+               "referrer": "https://registry.hkust.edu.hk/useful-tools/credit-transfer/database-institution/results-institution?page=1&institution_name=Any&admission_term=Any&hkust_subject=Any&hkust_course_code=Any&country_institution=Any",
+               "method": "GET",
+               "mode": "cors",
+               "credentials": "include"
+            });
         }
 
-        if (codeMap[uni][code] != null) {
-            return codeMap[uni][code]
-        } 
+        async function resultParser(doc, dest) {
+            const tileList = doc.querySelectorAll(".tile-transfer")
+            tileList.forEach(t => {
+            
+                const hName = t.querySelector(".tile-transfer__subject").textContent.trim().slice(2)
+                const hCode = t.querySelector(".tile-transfer__ust-course-code").textContent.trim()
+            
+                const mapReq = t.querySelector(".tile-transfer__ribbon").textContent.trim()
 
-        if (nameMap[uni] == null) {
-            nameMap[uni] = new Object()
+                const ustName = t.querySelector(".tile-transfer__course-title").textContent.trim().slice(1).trim()
+                const ustCode = t.querySelector(".tile-transfer__course-code").textContent.trim()
+                const credits = t.querySelector(".tile-transfer__credits").textContent.trim()
 
-            if (data[uni + " through virtual study"] != null){
-                data[uni + " through virtual study"].forEach((mapping) => {
-
-                    const hostName = mapping["hostCourse"]["name"]
-
-                    if (nameMap[uni][hostName] == null) {
-                        nameMap[uni][hostName] = []
-                        }
-                        mapping["ustEquiv"]["virtual"] = true 
-                        nameMap[uni][hostName].push(mapping["ustEquiv"])
+                dest.push({
+                    hostName: hName,
+                    hostCode: hCode,
+                    condition: mapReq,
+                    ustName,
+                    ustCode,
+                    credits,
                 })
-            }
-
-            if (data[uni] != null) {
-                data[uni].forEach((mapping) => {
-
-                    const hostName = mapping["hostCourse"]["name"]
-
-                    if (nameMap[uni][hostName] == null) {
-                        nameMap[uni][hostName] = []
-                        }
-                        mapping["ustEquiv"]["virtual"] = false
-                        nameMap[uni][hostName].push(mapping["ustEquiv"])
-                })
-            }
+            })
         }
 
-        return nameMap[uni][name]
 
+        async function getWholeList(term = "Any", country = "Any", institution = "Any", subject = "Any", ustCourseCode = "Any") {
+            const result = new Array()
+            let i = 1
+            let ok = await makeRequest(term, country, institution, subject, ustCourseCode, i).then(r => r.text()).then(text => {
+                const doc = parser.parseFromString(text, "text/html")
+                resultParser(doc, result)
+                const stuff = doc.querySelectorAll(".result-count-results__num")
+                const cur = stuff[0].textContent.split("-")[1]
+                const end = stuff[1].textContent
+                console.log(doc.querySelector(".result-count-container").textContent)
+                return Promise.resolve(cur == end)
+            })
+            while (!ok){
+                i++;
+                ok = await makeRequest(term, country, institution, subject, ustCourseCode, i).then(r => r.text()).then(text => {
+                    const doc = parser.parseFromString(text, "text/html")
+                    resultParser(doc, result)
+                    const stuff = doc.querySelectorAll(".result-count-results__num")
+                    const cur = stuff[0].textContent.split("-")[1]
+                    const end = stuff[1].textContent
+                    console.log(doc.querySelector(".result-count-container").textContent)
+                    return Promise.resolve(cur == end)
+                })
+            }
+            return result
+        }
+
+        const result = await getWholeList("Any", "Any", uni)
+        if (!(result.length == 0)) {
+            data.set({uni: result}).then(() => console.log(`Mapping for ${uni} updated`)).catch((e) => console.log(e))
+        } else {
+            console.log(`Mapping for ${uni} not found`)
+        }
     }
 /*
     function insertContent(row, mapped_courses) {

@@ -12,6 +12,9 @@
         ]
         }
     ],
+    "permissions": [
+        "storage"
+      ],
     "web_accessible_resources": [{
         "resources": [ "data/stuff.json" ],
         "matches": [ "https://vse.apru.org/*" ]
