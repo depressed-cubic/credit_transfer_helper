@@ -11,16 +11,70 @@ async function main() {
      * @param {string} uni name of the university without weird stuff like (Academic) 
      * @param {string} code source course code
      * @param {string} name source course name
-     * @returns array of object with property `code`, `name`, `credits`, `requirement`, `virtual` (can be empty)
+     * @returns array of object with property `code`, `name`, `credits`, `condition`, `virtual` (can be empty)
      */
-    function course_mapper(uni, code, name) {
-        
 
+    function isEmpty(object) {
+        return Object.keys(object).length == 0
+    }
+
+    async function course_mapper(uni, code, name) {
+        
+        const result = []
+
+        await Promise.allSettled([updateMapping(uni), updateMapping(uni + " through virtual study")])
+
+        data.get(uni + " through virtual study").then(r => {
+            if (!isEmpty(r)) {
+
+                const mappings = r[uni].mappings
+
+                for (const mapping of mappings) {
+                    if (mapping.hostCode === code || mapping.hostName === name) {
+                        result.push({
+                            code: mapping.ustCode,
+                            name: mapping.ustName,
+                            credits: mapping.credits,
+                            condition: mapping.condition,
+                            virtual: true
+                        })
+                    } 
+                }
+            }
+        })
+
+        data.get(uni).then(r => {
+            if (!isEmpty(r)) {
+
+                const mappings = r[uni].mappings
+
+                for (const mapping of mappings) {
+                    if (mapping.hostCode === code || mapping.hostName === name) {
+                        result.push({
+                            code: mapping.ustCode,
+                            name: mapping.ustName,
+                            credits: mapping.credits,
+                            condition: mapping.condition,
+                            virtual: false
+                        })
+                    } 
+                }
+            }
+        })
+        
         // getWholeList("Any","Any", "Nanyang Technological University").then(r => console.log(r))
 
     }
+    
 
     async function updateMapping(uni) {
+
+        const prev_result = await data.get(uni)
+        if (!isEmpty(prev_result)) {
+            if ((Date.now() - prev_result[uni].time) <= 1000 * 3600) {
+                return 
+            }
+        }
 
         async function makeRequest(term = "Any", country = "Any", institution = "Any", subject = "Any", ustCourseCode = "Any", page = 1) {
             return fetch(
@@ -28,7 +82,7 @@ async function main() {
                "headers": { },
                "referrer": "https://registry.hkust.edu.hk/useful-tools/credit-transfer/database-institution/results-institution?page=1&institution_name=Any&admission_term=Any&hkust_subject=Any&hkust_course_code=Any&country_institution=Any",
                "method": "GET",
-               "mode": "cors",
+               "mode": "no-cors",
                "credentials": "include"
             });
         }
@@ -87,7 +141,10 @@ async function main() {
 
         const result = await getWholeList("Any", "Any", uni)
         if (!(result.length == 0)) {
-            data.set({uni: result}).then(() => console.log(`Mapping for ${uni} updated`)).catch((e) => console.log(e))
+            await data.set({uni: {mappings: result, time: Date.now()}}).then(() => {
+                console.log(`Mapping for ${uni} updated`)
+                return Promise.resolve(1)
+            }).catch((e) => console.log(e))
         } else {
             console.log(`Mapping for ${uni} not found`)
         }
@@ -188,7 +245,7 @@ async function main() {
 
     }
 
-    function boxHandler(element) {
+    async function boxHandler(element) {
         // Find corresponding uni of the box
         let uni = element.children[0].textContent
 
@@ -200,31 +257,29 @@ async function main() {
             uni = uni.slice(0, -11)
         }
 
-        // Make sure actually is a uni in list
-        if (data[uni + " through virtual study"] != null || data[uni] != null) {
-            let courses = element.querySelector("table")
+        // Get course list
+        let courses = element.querySelector("table")
 
-            // Make sure there are courses
-            if (courses != null) {
-                let rows = [...courses.querySelectorAll("tr")]
+        // Make sure there are courses
+        if (courses != null) {
+            let rows = [...courses.querySelectorAll("tr")]
 
-                const newContainer = document.createElement("div")
-            
-                rows.forEach((row) => {
-                    const hostCourse = new Object()
-                    hostCourse["code"] = row.children[0].textContent
-                    hostCourse["name"] = row.children[1].textContent
+            const newContainer = document.createElement("div")
+        
+            rows.forEach((row) => {
+                const hostCourse = new Object()
+                hostCourse["code"] = row.children[0].textContent
+                hostCourse["name"] = row.children[1].textContent
 
-                    const ustCourses = course_mapper(uni, hostCourse["code"], hostCourse["name"])
+                const ustCourses = course_mapper(uni, hostCourse["code"], hostCourse["name"])
 
-                    const kek = new MappingTile(hostCourse, ustCourses)
-                    newContainer.appendChild(kek.mainDiv)
-                })
+                const kek = new MappingTile(hostCourse, ustCourses)
+                newContainer.appendChild(kek.mainDiv)
+            })
 
-                courses.after(newContainer)
+            courses.after(newContainer)
 
-                courses.remove()
-            }
+            courses.remove()
         }
     }
 
