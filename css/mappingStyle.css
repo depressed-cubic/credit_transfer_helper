@@ -1,16 +1,29 @@
 .course-mapping {
     display: flex;
     flex-direction: column;
-    margin: 1em
+    margin: 0.25em;
+    padding: 0.5em;
+    border: 1pt solid rgb(52, 130, 255);
+    border-radius: 2pt;
 }
 
-.host-course-tile, .mapped-course-tile {
+.host-course-tile, .mapped-course-tile, .mapping-note{
     display: flex;
     flex-direction: row;
-    gap: 0.5em
+    gap: 0.5em;
+    flex-wrap: wrap;
 }
 
+.mapping-note-1 {
+    color: aquamarine;
+}
+.mapping-note-2 {
+    color: #2cff2c 
+}
 
+.mapped-course-tile {
+    margin-top: 0.5em;
+}
 
 .host-course-tile{
     margin-bottom: 0.5em;

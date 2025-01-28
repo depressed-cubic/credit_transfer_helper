@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "mapping helper",
     "description": "show mapping or sth idk",
-    "version": "0.1",
+    "version": "0.11",
     "content_scripts": [
         {
         "js": ["scripts/apru.js"],
@@ -18,5 +18,12 @@
     "web_accessible_resources": [{
         "resources": [ "data/stuff.json" ],
         "matches": [ "https://vse.apru.org/*" ]
-    }]
+    }],
+    "host_permissions": [
+        "https://registry.hkust.edu.hk/",
+        "https://vse.apru.org/"
+    ],
+    "background": {
+      "service_worker": "scripts/fuckYouCORS.js"
+    }
   }
