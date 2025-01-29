@@ -72,7 +72,7 @@ async function main() {
     async function updateMapping(uni) {
 
         const prev_result = await data.get(uni)
-        if ((Date.now() - prev_result[uni].time) <= 1000 * 3600) {
+        if (!isEmpty(prev_result) && (Date.now() - prev_result[uni].time) <= 1000 * 3600) {
             return 
         }
         async function makeRequest(term = "Any", country = "Any", institution = "Any", subject = "Any", ustCourseCode = "Any", page = 1) {
